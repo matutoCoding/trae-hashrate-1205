@@ -1,0 +1,89 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding: 0 $page-padding $page-padding;
+}
+
+.header {
+  padding: $spacing-lg 0 $spacing-md;
+}
+
+.headerTitle {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.headerDesc {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+.filterBar {
+  display: flex;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-sm;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+  overflow-x: auto;
+  box-shadow: $shadow-card;
+}
+
+.filterItem {
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-sm;
+  white-space: nowrap;
+  transition: all $transition-base;
+}
+
+.filterItem.active {
+  background: $color-primary;
+}
+
+.filterText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+}
+
+.filterItem.active .filterText {
+  color: $color-text-white;
+}
+
+.filterCount {
+  font-size: $font-size-xs;
+  margin-left: $spacing-xs;
+  opacity: 0.7;
+}
+
+.createButton {
+  width: 100%;
+  height: $button-height-lg;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: $spacing-md;
+  box-shadow: 0 4rpx 16rpx rgba(26, 54, 93, 0.2);
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.createButtonText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+}
+
+.listContainer {
+  padding-bottom: 40rpx;
+}

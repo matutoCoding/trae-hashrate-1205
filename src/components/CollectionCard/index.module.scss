@@ -1,0 +1,92 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  display: flex;
+  gap: $spacing-md;
+}
+
+.image {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: $radius-md;
+  flex-shrink: 0;
+  background: $color-bg-hover;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: $spacing-sm;
+}
+
+.name {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  flex: 1;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.metaLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.metaValue {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.locationLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.locationValue {
+  font-size: $font-size-xs;
+  color: $color-primary;
+}
+
+.scheduleBar {
+  margin-top: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background: $color-bg-conflict;
+  border-radius: $radius-xs;
+}
+
+.scheduleText {
+  font-size: $font-size-xs;
+  color: $color-warning;
+}

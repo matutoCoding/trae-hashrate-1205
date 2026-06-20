@@ -1,0 +1,66 @@
+@use '@/styles/variables.scss' as *;
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6rpx 20rpx;
+  border-radius: $radius-sm;
+  white-space: nowrap;
+}
+
+.tagText {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  line-height: 1.4;
+}
+
+.tagPending {
+  background-color: $color-bg-pending;
+  color: $color-info;
+}
+
+.tagApproved {
+  background-color: $color-bg-approved;
+  color: $color-success;
+}
+
+.tagRejected {
+  background-color: $color-bg-rejected;
+  color: $color-error;
+}
+
+.tagDraft {
+  background-color: $color-bg-hover;
+  color: $color-text-tertiary;
+}
+
+.tagLent {
+  background-color: #fff3e0;
+  color: $color-warning;
+}
+
+.tagReturned {
+  background-color: $color-bg-approved;
+  color: $color-success;
+}
+
+.tagCancelled {
+  background-color: $color-bg-hover;
+  color: $color-text-tertiary;
+}
+
+.tagClear {
+  background-color: $color-bg-approved;
+  color: $color-success;
+}
+
+.tagWarning {
+  background-color: $color-bg-conflict;
+  color: $color-warning;
+}
+
+.tagConflict {
+  background-color: $color-bg-rejected;
+  color: $color-error;
+}
