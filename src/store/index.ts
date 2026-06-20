@@ -42,12 +42,7 @@ const getNow = () => new Date().toISOString().replace('T', ' ').substring(0, 19)
 const isLoanPendingActive = (loan: LoanApplication): boolean => {
   if (loan.status !== 'pending') return false;
   if (!loan.currentNode) return false;
-  const nodes = APPROVAL_FLOW.nodes;
-  const currentIndex = nodes.findIndex((n) => n === loan.currentNode);
-  return !loan.approvalRecords.some((r) => {
-    const rIndex = nodes.findIndex((n) => n === r.nodeType);
-    return r.status === 'rejected' && rIndex > currentIndex;
-  });
+  return true;
 };
 
 const computeSchedules = (loans: LoanApplication[]): ScheduleItem[] => {
@@ -125,7 +120,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   getProcessedApprovals: (role) => {
     return get().loans.filter((l) => {
       return l.approvalRecords.some(
-        (r) => r.nodeType === role && r.status !== 'pending'
+        (r) => r.nodeType === role && !!r.approverId
       );
     });
   },
@@ -252,8 +247,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         const prevRecord = updatedRecords.find((r) => r.nodeType === prevNode);
         if (prevRecord) {
           prevRecord.status = 'pending';
-          prevRecord.approverId = '';
-          prevRecord.approverName = '';
           prevRecord.comment = '';
           prevRecord.updatedAt = now;
         }
