@@ -11,7 +11,7 @@ import classnames from 'classnames';
 const LoanDetailPage: React.FC = () => {
   const router = useRouter();
   const loanId = router.params.id as string;
-  const { cancelLoan, currentUser } = useAppStore();
+  const { cancelLoan, resubmitLoan, currentUser } = useAppStore();
   const loan = useAppStore((state) => state.getLoanById(loanId));
 
   if (!loan) {
@@ -26,6 +26,8 @@ const LoanDetailPage: React.FC = () => {
 
   const isCreator = loan.creatorId === currentUser.id;
   const canCancel = isCreator && ['pending', 'approved'].includes(loan.status);
+  const canEdit = isCreator && ['pending', 'rejected'].includes(loan.status);
+  const canResubmit = isCreator && loan.status === 'rejected';
 
   const handleCancel = () => {
     Taro.showModal({
@@ -36,6 +38,25 @@ const LoanDetailPage: React.FC = () => {
           cancelLoan(loanId);
           Taro.showToast({ title: '已取消', icon: 'success' });
           setTimeout(() => Taro.navigateBack(), 1000);
+        }
+      }
+    });
+  };
+
+  const handleEdit = () => {
+    Taro.navigateTo({
+      url: `/pages/loan-create/index?loanId=${loanId}`
+    });
+  };
+
+  const handleResubmit = () => {
+    Taro.showModal({
+      title: '确认重新提交',
+      content: '重新提交后将从策展部开始重新走审批流程。',
+      success: (res) => {
+        if (res.confirm) {
+          resubmitLoan(loanId);
+          Taro.showToast({ title: '已重新提交', icon: 'success' });
         }
       }
     });
@@ -188,11 +209,23 @@ const LoanDetailPage: React.FC = () => {
         </View>
       </View>
 
-      {canCancel && (
+      {(canCancel || canEdit || canResubmit) && (
         <View className={styles.actionBar}>
-          <View className={classnames(styles.btn, styles.btnCancel)} onClick={handleCancel}>
-            <Text className={styles.btnCancelText}>取消申请</Text>
-          </View>
+          {canCancel && (
+            <View className={classnames(styles.btn, styles.btnCancel)} onClick={handleCancel}>
+              <Text className={styles.btnCancelText}>取消申请</Text>
+            </View>
+          )}
+          {canEdit && (
+            <View className={classnames(styles.btn, styles.btnEdit)} onClick={handleEdit}>
+              <Text className={styles.btnEditText}>编辑</Text>
+            </View>
+          )}
+          {canResubmit && (
+            <View className={classnames(styles.btn, styles.btnResubmit)} onClick={handleResubmit}>
+              <Text className={styles.btnResubmitText}>重新提交</Text>
+            </View>
+          )}
         </View>
       )}
     </View>

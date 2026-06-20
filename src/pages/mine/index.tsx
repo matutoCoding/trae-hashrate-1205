@@ -1,11 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import { useAppStore } from '@/store';
+import classnames from 'classnames';
 
 const MinePage: React.FC = () => {
-  const { currentUser, getMyLoans, getPendingApprovals, getProcessedApprovals } = useAppStore();
+  const { currentUser, allUsers, switchUser, getMyLoans, getPendingApprovals, getProcessedApprovals } = useAppStore();
+  const [showRolePicker, setShowRolePicker] = useState(false);
 
   const myLoans = useMemo(() => getMyLoans(currentUser.id), [getMyLoans, currentUser.id]);
   const pendingCount = useMemo(
@@ -27,19 +29,29 @@ const MinePage: React.FC = () => {
     });
   };
 
+  const handleSwitchRole = (userId: string) => {
+    switchUser(userId);
+    setShowRolePicker(false);
+    Taro.showToast({ title: '已切换身份', icon: 'success' });
+  };
+
   return (
     <View className={styles.page}>
-      <View className={styles.profileSection}>
+      <View className={styles.profileSection} onClick={() => setShowRolePicker(true)}>
         <Image
           className={styles.avatar}
           src={currentUser.avatar}
           mode="aspectFill"
         />
         <View className={styles.userInfo}>
-          <Text className={styles.userName}>{currentUser.name}</Text>
+          <Text className={styles.userName}>
+            {currentUser.name}
+            <Text className={styles.switchHint}>（点击切换）</Text>
+          </Text>
           <Text className={styles.userRole}>{currentUser.roleName}</Text>
           <Text className={styles.userDept}>{currentUser.department}</Text>
         </View>
+        <Text className={styles.profileArrow}>›</Text>
       </View>
 
       <View className={styles.statsSection}>
@@ -95,7 +107,7 @@ const MinePage: React.FC = () => {
             <Text>📞</Text>
           </View>
           <Text className={styles.menuText}>联系电话</Text>
-          <Text className={styles.menuText} style={{ color: '$color-text-secondary', fontSize: '24rpx', flex: 0 }}>
+          <Text className={styles.menuText} style={{ color: '#999', fontSize: '24rpx', flex: 0 }}>
             {currentUser.phone}
           </Text>
         </View>
@@ -104,11 +116,46 @@ const MinePage: React.FC = () => {
             <Text>💡</Text>
           </View>
           <Text className={styles.menuText}>系统版本</Text>
-          <Text className={styles.menuText} style={{ color: '$color-text-secondary', fontSize: '24rpx', flex: 0 }}>
+          <Text className={styles.menuText} style={{ color: '#999', fontSize: '24rpx', flex: 0 }}>
             v1.0.0
           </Text>
         </View>
       </View>
+
+      {showRolePicker && (
+        <View className={styles.roleModalOverlay} onClick={() => setShowRolePicker(false)}>
+          <View className={styles.roleModal} onClick={(e) => e.stopPropagation()}>
+            <Text className={styles.roleModalTitle}>切换审批身份</Text>
+            <Text className={styles.roleModalTip}>用于测试不同审批节点的流转效果</Text>
+            {allUsers.map((user) => (
+              <View
+                key={user.id}
+                className={classnames(
+                  styles.roleOption,
+                  currentUser.id === user.id && styles.roleOptionActive
+                )}
+                onClick={() => handleSwitchRole(user.id)}
+              >
+                <Image
+                  className={styles.roleAvatar}
+                  src={user.avatar}
+                  mode="aspectFill"
+                />
+                <View className={styles.roleInfo}>
+                  <Text className={styles.roleName}>{user.name}</Text>
+                  <Text className={styles.roleDesc}>{user.roleName} · {user.department}</Text>
+                </View>
+                {currentUser.id === user.id && (
+                  <Text className={styles.roleCheck}>✓</Text>
+                )}
+              </View>
+            ))}
+            <View className={styles.roleCancelBtn} onClick={() => setShowRolePicker(false)}>
+              <Text className={styles.roleCancelText}>取消</Text>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 };

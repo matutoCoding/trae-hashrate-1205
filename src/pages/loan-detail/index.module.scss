@@ -135,6 +135,27 @@
   color: $color-text-secondary;
 }
 
+.btnEdit {
+  background: $color-bg-card;
+  border: 2rpx solid $color-primary;
+}
+
+.btnEditText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.btnResubmit {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+}
+
+.btnResubmitText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+}
+
 .btnPrimary {
   background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
 }

@@ -9,13 +9,13 @@ import {
   APPROVAL_FLOW,
   LoanStatus
 } from '@/types';
-import { mockLoanApplications, mockCurrentUser } from '@/data/mockApprovals';
+import { mockLoanApplications, mockCurrentUser, mockApprovalUsers } from '@/data/mockApprovals';
 import { mockCollections } from '@/data/mockCollections';
 import { generateLoanNo, checkScheduleConflict } from '@/utils';
 import Taro from '@tarojs/taro';
 
 const STORAGE_KEY_LOANS = 'museum_loan_applications';
-const STORAGE_KEY_SCHEDULES = 'museum_loan_schedules';
+const STORAGE_KEY_USER = 'museum_current_user';
 
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
   try {
@@ -39,11 +39,12 @@ const saveToStorage = (key: string, data: any) => {
 
 const getNow = () => new Date().toISOString().replace('T', ' ').substring(0, 19);
 
-const isLoanReturned = (loan: LoanApplication): boolean => {
+const isLoanPendingActive = (loan: LoanApplication): boolean => {
   if (loan.status !== 'pending') return false;
+  if (!loan.currentNode) return false;
   const nodes = APPROVAL_FLOW.nodes;
   const currentIndex = nodes.findIndex((n) => n === loan.currentNode);
-  return loan.approvalRecords.some((r) => {
+  return !loan.approvalRecords.some((r) => {
     const rIndex = nodes.findIndex((n) => n === r.nodeType);
     return r.status === 'rejected' && rIndex > currentIndex;
   });
@@ -52,7 +53,11 @@ const isLoanReturned = (loan: LoanApplication): boolean => {
 const computeSchedules = (loans: LoanApplication[]): ScheduleItem[] => {
   const activeStatuses: LoanStatus[] = ['pending', 'approved', 'lent'];
   return loans
-    .filter((l) => activeStatuses.includes(l.status) && !isLoanReturned(l))
+    .filter((l) => {
+      if (!activeStatuses.includes(l.status)) return false;
+      if (l.status === 'pending') return isLoanPendingActive(l);
+      return true;
+    })
     .map((l) => ({
       id: `s_${l.id}`,
       loanId: l.id,
@@ -68,11 +73,11 @@ const computeSchedules = (loans: LoanApplication[]): ScheduleItem[] => {
 
 interface AppState {
   currentUser: UserInfo;
+  allUsers: UserInfo[];
   loans: LoanApplication[];
   collections: Collection[];
   schedules: ScheduleItem[];
-  initFromStorage: () => void;
-  persist: () => void;
+  switchUser: (userId: string) => void;
   getLoansByStatus: (status: LoanStatus[]) => LoanApplication[];
   getPendingApprovals: (role: ApprovalNodeType) => LoanApplication[];
   getProcessedApprovals: (role: ApprovalNodeType) => LoanApplication[];
@@ -84,31 +89,26 @@ interface AppState {
   rejectLoan: (loanId: string, approverId: string, approverName: string, comment: string) => void;
   createLoan: (data: Partial<LoanApplication>) => LoanApplication;
   updateLoan: (loanId: string, data: Partial<LoanApplication>) => void;
+  resubmitLoan: (loanId: string) => void;
   cancelLoan: (loanId: string) => void;
   checkConflict: (collectionId: string, startDate: string, endDate: string, excludeLoanId?: string) => { hasConflict: boolean; conflicts: ScheduleItem[]; message: string };
 }
 
 const initialLoans = loadFromStorage<LoanApplication[]>(STORAGE_KEY_LOANS, mockLoanApplications);
+const initialUser = loadFromStorage<UserInfo>(STORAGE_KEY_USER, mockCurrentUser);
 const initialSchedules = computeSchedules(initialLoans);
 
 export const useAppStore = create<AppState>((set, get) => ({
-  currentUser: mockCurrentUser,
+  currentUser: initialUser,
+  allUsers: mockApprovalUsers,
   loans: initialLoans,
   collections: mockCollections,
   schedules: initialSchedules,
 
-  initFromStorage: () => {
-    const storedLoans = loadFromStorage<LoanApplication[] | null>(STORAGE_KEY_LOANS, null);
-    if (storedLoans) {
-      set({
-        loans: storedLoans,
-        schedules: computeSchedules(storedLoans)
-      });
-    }
-  },
-
-  persist: () => {
-    saveToStorage(STORAGE_KEY_LOANS, get().loans);
+  switchUser: (userId) => {
+    const user = mockApprovalUsers.find((u) => u.id === userId) || mockCurrentUser;
+    set({ currentUser: user });
+    saveToStorage(STORAGE_KEY_USER, user);
   },
 
   getLoansByStatus: (statuses) => {
@@ -117,7 +117,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   getPendingApprovals: (role) => {
     return get().loans.filter(
-      (l) => l.status === 'pending' && l.currentNode === role
+      (l) =>
+        (l.status === 'pending' && l.currentNode === role && isLoanPendingActive(l))
     );
   },
 
@@ -206,7 +207,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       const newSchedules = computeSchedules(loans);
       saveToStorage(STORAGE_KEY_LOANS, loans);
-      saveToStorage(STORAGE_KEY_SCHEDULES, newSchedules);
 
       return { loans, schedules: newSchedules };
     });
@@ -220,9 +220,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
         const nodes = APPROVAL_FLOW.nodes;
         const currentIndex = nodes.findIndex((n) => n === loan.currentNode);
-        const prevIndex = currentIndex - 1;
-        const prevNode = prevIndex >= 0 ? nodes[prevIndex] : null;
-        const prevNodeName = prevNode ? APPROVAL_FLOW.nodeNames[prevNode] : '';
 
         const updatedRecords = loan.approvalRecords.map((r) => {
           if (r.nodeType === loan.currentNode) {
@@ -238,24 +235,27 @@ export const useAppStore = create<AppState>((set, get) => ({
           return r;
         });
 
-        if (prevNode) {
-          const prevRecord = updatedRecords.find((r) => r.nodeType === prevNode);
-          if (prevRecord) {
-            prevRecord.status = 'pending';
-            prevRecord.updatedAt = now;
-          } else {
-            updatedRecords.unshift({
-              id: `a_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-              nodeType: prevNode,
-              nodeName: prevNodeName,
-              approverId: '',
-              approverName: '',
-              status: 'pending' as ApprovalStatus,
-              comment: '',
-              createdAt: now,
-              updatedAt: now
-            });
-          }
+        if (currentIndex <= 0) {
+          return {
+            ...loan,
+            status: 'rejected' as LoanStatus,
+            currentNode: null,
+            currentNodeName: '',
+            approvalRecords: updatedRecords,
+            updatedAt: now
+          };
+        }
+
+        const prevNode = nodes[currentIndex - 1];
+        const prevNodeName = APPROVAL_FLOW.nodeNames[prevNode];
+
+        const prevRecord = updatedRecords.find((r) => r.nodeType === prevNode);
+        if (prevRecord) {
+          prevRecord.status = 'pending';
+          prevRecord.approverId = '';
+          prevRecord.approverName = '';
+          prevRecord.comment = '';
+          prevRecord.updatedAt = now;
         }
 
         return {
@@ -270,7 +270,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       const newSchedules = computeSchedules(loans);
       saveToStorage(STORAGE_KEY_LOANS, loans);
-      saveToStorage(STORAGE_KEY_SCHEDULES, newSchedules);
 
       return { loans, schedules: newSchedules };
     });
@@ -327,7 +326,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       const loans = [newLoan, ...state.loans];
       const newSchedules = computeSchedules(loans);
       saveToStorage(STORAGE_KEY_LOANS, loans);
-      saveToStorage(STORAGE_KEY_SCHEDULES, newSchedules);
       return { loans, schedules: newSchedules };
     });
 
@@ -347,7 +345,44 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       const newSchedules = computeSchedules(loans);
       saveToStorage(STORAGE_KEY_LOANS, loans);
-      saveToStorage(STORAGE_KEY_SCHEDULES, newSchedules);
+      return { loans, schedules: newSchedules };
+    });
+  },
+
+  resubmitLoan: (loanId) => {
+    const now = getNow();
+    set((state) => {
+      const loans: LoanApplication[] = state.loans.map((loan) => {
+        if (loan.id !== loanId) return loan;
+
+        const newRecords = [
+          {
+            id: `a_${Date.now()}`,
+            nodeType: 'curator' as ApprovalNodeType,
+            nodeName: '策展部',
+            approverId: '',
+            approverName: '',
+            status: 'pending' as ApprovalStatus,
+            comment: '',
+            createdAt: now,
+            updatedAt: now
+          }
+        ];
+
+        return {
+          ...loan,
+          status: 'pending' as LoanStatus,
+          currentNode: 'curator' as ApprovalNodeType,
+          currentNodeName: '策展部',
+          approvalRecords: newRecords,
+          conflictStatus: 'clear',
+          conflictMessage: '',
+          updatedAt: now
+        };
+      });
+
+      const newSchedules = computeSchedules(loans);
+      saveToStorage(STORAGE_KEY_LOANS, loans);
       return { loans, schedules: newSchedules };
     });
   },
@@ -368,7 +403,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       );
       const newSchedules = computeSchedules(loans);
       saveToStorage(STORAGE_KEY_LOANS, loans);
-      saveToStorage(STORAGE_KEY_SCHEDULES, newSchedules);
       return { loans, schedules: newSchedules };
     });
   },

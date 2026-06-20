@@ -6,15 +6,19 @@ import StatusTag from '@/components/StatusTag';
 import { LoanApplication } from '@/types';
 import { formatDateTime, formatDate, getDaysBetween } from '@/utils';
 
+type DetailViewMode = 'approval' | 'loan';
+
 interface ApprovalCardProps {
   loan: LoanApplication;
+  viewMode?: DetailViewMode;
 }
 
-const ApprovalCard: React.FC<ApprovalCardProps> = ({ loan }) => {
+const ApprovalCard: React.FC<ApprovalCardProps> = ({ loan, viewMode = 'approval' }) => {
   const handleClick = () => {
-    Taro.navigateTo({
-      url: `/pages/approval-detail/index?id=${loan.id}`
-    });
+    const targetUrl = viewMode === 'loan'
+      ? `/pages/loan-detail/index?id=${loan.id}`
+      : `/pages/approval-detail/index?id=${loan.id}`;
+    Taro.navigateTo({ url: targetUrl });
   };
 
   return (

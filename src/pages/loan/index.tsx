@@ -70,7 +70,7 @@ const LoanRegisterPage: React.FC = () => {
       <ScrollView scrollY className={styles.listContainer} style={{ height: 'calc(100vh - 440rpx)' }}>
         {filteredList.length > 0 ? (
           filteredList.map((loan) => (
-            <ApprovalCard key={loan.id} loan={loan} />
+            <ApprovalCard key={loan.id} loan={loan} viewMode="loan" />
           ))
         ) : (
           <EmptyState
