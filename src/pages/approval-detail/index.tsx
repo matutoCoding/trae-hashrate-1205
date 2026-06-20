@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, Textarea } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import styles from './index.module.scss';
@@ -11,16 +11,12 @@ import classnames from 'classnames';
 const ApprovalDetailPage: React.FC = () => {
   const router = useRouter();
   const loanId = router.params.id as string;
-  const { currentUser, getLoanById, approveLoan, rejectLoan } = useAppStore();
-  const [loan, setLoan] = useState(getLoanById(loanId));
+  const { currentUser, approveLoan, rejectLoan } = useAppStore();
+  const loan = useAppStore((state) => state.getLoanById(loanId));
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
   const [approveComment, setApproveComment] = useState('');
   const [showApproveModal, setShowApproveModal] = useState(false);
-
-  useEffect(() => {
-    setLoan(getLoanById(loanId));
-  }, [loanId, getLoanById]);
 
   if (!loan) {
     return (
@@ -206,6 +202,16 @@ const ApprovalDetailPage: React.FC = () => {
 
       {isMyApproval && (
         <View className={styles.bottomBar}>
+          <View
+            className={classnames(styles.btn, styles.btnEdit)}
+            onClick={() => {
+              Taro.navigateTo({
+                url: `/pages/loan-create/index?loanId=${loanId}`
+              });
+            }}
+          >
+            <Text className={styles.btnEditText}>编辑</Text>
+          </View>
           <View className={classnames(styles.btn, styles.btnReject)} onClick={handleReject}>
             <Text className={styles.btnRejectText}>驳回</Text>
           </View>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import { View, Text, Image, ScrollView } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import styles from './index.module.scss';
@@ -10,13 +10,8 @@ import classnames from 'classnames';
 const CollectionDetailPage: React.FC = () => {
   const router = useRouter();
   const collectionId = router.params.id as string;
-  const { getCollectionById, getSchedulesByCollection } = useAppStore();
-  const [collection, setCollection] = useState(getCollectionById(collectionId));
-  const schedules = useMemo(() => getSchedulesByCollection(collectionId), [collectionId, getSchedulesByCollection]);
-
-  useEffect(() => {
-    setCollection(getCollectionById(collectionId));
-  }, [collectionId, getCollectionById]);
+  const collection = useAppStore((state) => state.getCollectionById(collectionId));
+  const schedules = useAppStore((state) => state.getSchedulesByCollection(collectionId));
 
   if (!collection) {
     return (
@@ -28,14 +23,12 @@ const CollectionDetailPage: React.FC = () => {
     );
   }
 
-  const hasActiveSchedule = schedules.some((s) =>
-    ['pending', 'approved', 'lent'].includes(s.status)
-  );
-  const canBorrow = collection.isAvailable && !hasActiveSchedule;
+  const hasActiveSchedule = schedules.length > 0;
+  const canBorrow = collection.isAvailable;
 
   const handleCreateLoan = () => {
     if (!canBorrow) {
-      Taro.showToast({ title: '该藏品当前不可外借', icon: 'none' });
+      Taro.showToast({ title: '该藏品暂不外借', icon: 'none' });
       return;
     }
     Taro.navigateTo({

@@ -143,6 +143,17 @@
   }
 }
 
+.btnEdit {
+  background: $color-bg-card;
+  border: 2rpx solid $color-primary;
+}
+
+.btnEditText {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
 .btnReject {
   background: $color-bg-rejected;
   border: 2rpx solid $color-error;

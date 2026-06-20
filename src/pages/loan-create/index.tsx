@@ -9,7 +9,9 @@ import classnames from 'classnames';
 const LoanCreatePage: React.FC = () => {
   const router = useRouter();
   const preCollectionId = router.params.collectionId as string;
-  const { collections, getSchedulesByCollection, checkConflict, createLoan } = useAppStore();
+  const loanId = router.params.loanId as string;
+  const isEdit = !!loanId;
+  const { collections, getSchedulesByCollection, checkConflict, createLoan, updateLoan, getLoanById } = useAppStore();
 
   const [title, setTitle] = useState('');
   const [exhibitionName, setExhibitionName] = useState('');
@@ -41,24 +43,64 @@ const LoanCreatePage: React.FC = () => {
   const [conflictMessage, setConflictMessage] = useState('');
 
   useEffect(() => {
-    if (preCollectionId) {
+    Taro.setNavigationBarTitle({ title: isEdit ? '编辑外借申请' : '发起外借申请' });
+  }, [isEdit]);
+
+  useEffect(() => {
+    if (isEdit) {
+      const loan = getLoanById(loanId);
+      if (loan) {
+        setTitle(loan.title);
+        setExhibitionName(loan.exhibitionName);
+        setReason(loan.reason);
+        const col = collections.find((c) => c.id === loan.collectionId);
+        if (col) setSelectedCollection(col);
+        setStartDate(loan.startDate);
+        setEndDate(loan.endDate);
+        setBorrowerName(loan.borrower.name);
+        setBorrowerInstitution(loan.borrower.institution);
+        setBorrowerContact(loan.borrower.contact);
+        setBorrowerPhone(loan.borrower.phone);
+        setBorrowerAddress(loan.borrower.address);
+        if (loan.insurance) {
+          setShowInsurance(true);
+          setInsuranceCompany(loan.insurance.company);
+          setInsurancePolicyNo(loan.insurance.policyNo);
+          setInsuranceAmount(String(loan.insurance.amount));
+          setInsuranceStartDate(loan.insurance.startDate);
+          setInsuranceEndDate(loan.insurance.endDate);
+        }
+        if (loan.transport) {
+          setShowTransport(true);
+          setTransportCompany(loan.transport.company);
+          setTransportMethod(loan.transport.method);
+          setTransportTrackingNo(loan.transport.trackingNo);
+          setTransportDepartureDate(loan.transport.departureDate);
+          setTransportReturnDate(loan.transport.returnDate);
+          setTransportVehicleNo(loan.transport.vehicleNo || '');
+          setTransportHandler(loan.transport.handler);
+        }
+        setConflictStatus(loan.conflictStatus);
+        setConflictMessage(loan.conflictMessage || '');
+      }
+    } else if (preCollectionId) {
       const col = collections.find((c) => c.id === preCollectionId);
       if (col) {
         setSelectedCollection(col);
       }
     }
-  }, [preCollectionId, collections]);
+  }, [isEdit, loanId, preCollectionId, collections, getLoanById]);
 
   useEffect(() => {
     if (selectedCollection && startDate && endDate) {
-      const result = checkConflict(selectedCollection.id, startDate, endDate);
+      const result = checkConflict(selectedCollection.id, startDate, endDate, isEdit ? loanId : undefined);
       setConflictStatus(result.hasConflict ? 'conflict' : 'clear');
       setConflictMessage(result.message);
     } else {
       setConflictStatus('clear');
       setConflictMessage('');
     }
-  }, [selectedCollection, startDate, endDate, checkConflict]);
+  }, [selectedCollection, startDate, endDate, checkConflict, isEdit, loanId]);
 
   const collectionsWithStatus = useMemo(() => {
     return collections.map((c) => {
@@ -90,14 +132,6 @@ const LoanCreatePage: React.FC = () => {
   const handleSelectCollection = (col: Collection) => {
     if (!col.isAvailable) {
       Taro.showToast({ title: '该藏品暂不外借', icon: 'none' });
-      return;
-    }
-    const schedules = getSchedulesByCollection(col.id);
-    const hasActive = schedules.some((s) =>
-      ['pending', 'approved', 'lent'].includes(s.status)
-    );
-    if (hasActive) {
-      Taro.showToast({ title: '该藏品档期已被占用', icon: 'none' });
       return;
     }
     setSelectedCollection(col);
@@ -154,7 +188,7 @@ const LoanCreatePage: React.FC = () => {
       };
     }
 
-    const newLoan = createLoan({
+    const loanData = {
       title,
       exhibitionName,
       reason,
@@ -169,16 +203,24 @@ const LoanCreatePage: React.FC = () => {
       transport,
       conflictStatus,
       conflictMessage
-    });
+    };
 
-    console.log('[LoanCreate] Created loan:', newLoan.loanNo);
-
-    Taro.showToast({ title: '申请已提交', icon: 'success' });
-    setTimeout(() => {
-      Taro.redirectTo({
-        url: `/pages/loan-detail/index?id=${newLoan.id}`
-      });
-    }, 1000);
+    if (isEdit) {
+      updateLoan(loanId, loanData);
+      Taro.showToast({ title: '修改已保存', icon: 'success' });
+      setTimeout(() => {
+        Taro.navigateBack();
+      }, 1000);
+    } else {
+      const newLoan = createLoan(loanData);
+      console.log('[LoanCreate] Created loan:', newLoan.loanNo);
+      Taro.showToast({ title: '申请已提交', icon: 'success' });
+      setTimeout(() => {
+        Taro.redirectTo({
+          url: `/pages/loan-detail/index?id=${newLoan.id}`
+        });
+      }, 1000);
+    }
   };
 
   return (
@@ -515,7 +557,7 @@ const LoanCreatePage: React.FC = () => {
           onClick={handleSubmit}
         >
           <Text className={styles.btnSubmitText}>
-            {conflictStatus === 'conflict' ? '存在档期冲突' : '提交申请'}
+            {conflictStatus === 'conflict' ? '存在档期冲突' : isEdit ? '保存修改' : '提交申请'}
           </Text>
         </View>
       </View>

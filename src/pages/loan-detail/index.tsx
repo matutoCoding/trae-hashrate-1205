@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, Image } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import styles from './index.module.scss';
@@ -11,12 +11,8 @@ import classnames from 'classnames';
 const LoanDetailPage: React.FC = () => {
   const router = useRouter();
   const loanId = router.params.id as string;
-  const { getLoanById, cancelLoan, currentUser } = useAppStore();
-  const [loan, setLoan] = useState(getLoanById(loanId));
-
-  useEffect(() => {
-    setLoan(getLoanById(loanId));
-  }, [loanId, getLoanById]);
+  const { cancelLoan, currentUser } = useAppStore();
+  const loan = useAppStore((state) => state.getLoanById(loanId));
 
   if (!loan) {
     return (
